@@ -1,0 +1,188 @@
+<html>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
+<script type="text/javascript">
+    $(document).ready( function () {
+        setup();})
+</script>
+<script>
+
+function setup()
+{
+	var game = {};
+	game.board = generate_new_board();
+	game.players = generate_players();
+	
+	run_game(game);
+}
+
+function generate_players() //only run once, data is paired with generate_new_board
+{
+	var player1 = {"name": "player1", "number": 1};
+	var player2 = {"name": "player2", "number": 2, "next_player": player1};
+	player1.next_player = player2;
+	return [player1, player2];
+}
+
+function generate_new_board(old_board) //first if should only run once, data is paired with generate_players
+{
+	var board = [];
+		
+	if(old_board == null)
+	{
+		for(var x = 0; x < 14; x++)
+		{
+			board[x] = { node_name: `node${x}`, next_node: board[x-1], count: 4};
+			if (x < 7)
+			{
+				board[x].bowl_type = "player_move1";
+			}
+			else
+			{
+				board[x].bowl_type = "player_move2";
+			}
+		}
+		
+		board[0].next_node = board[13];
+		board[0].bowl_type = "player_capture1";
+		board[0].count = 0;
+		board[7].bowl_type = "player_capture2";
+		board[7].count = 0;
+	}
+	else
+	{
+		board = structuredClone(old_board);
+	}
+
+	return board;
+}
+
+function run_game(game)
+{
+	var plays_made = [generate_new_board(game.board)];
+
+	var turn = 1;
+	var current_player = game.players[0];
+	while(!game_over(game.board))
+	{
+		console.log(`Player ${current_player.name} is taking turn ${turn}`);
+		var new_board = take_turn(current_player, game.board);
+		plays_made.push(new_board);
+		
+		game.board = new_board; //TODO: if things start going wrong, check here, make sure we don't need to copy it
+	
+		current_player = current_player.next_player;
+		turn++;
+	}
+	
+	var winner = assess_board(game.board, current_player);
+	
+	display_game(plays_made);
+}
+
+function take_turn(current_player, TRUE_GAME_BOARD, depth = 5)
+{
+	if(depth == 0)
+		return TRUE_GAME_BOARD;
+	
+	
+	var potential_moves = [];
+
+	//TODO
+	TRUE_GAME_BOARD.forEach(function(bowl)
+	{
+		if(legal_move(bowl, current_player))
+		{
+			var potential_move_board = make_move(TRUE_GAME_BOARD, bowl);
+			var look_ahead_board = take_turn(current_player.next_player, potential_move_board, depth-1);
+			
+			potential_moves.push([potential_move_board, look_ahead_board]);
+		}
+	})
+	
+	if (potential_moves.length == 0)
+	{
+		console.log("no legal moves");
+		if(game_over(TRUE_GAME_BOARD))
+			return TRUE_GAME_BOARD;
+		else
+			return take_turn(current_player.next_player, TRUE_GAME_BOARD, depth-1);
+	}
+	
+	console.log("Evaluating potential moves:====================");
+	console.log(potential_moves);
+	
+	const best_move = potential_moves.reduce(function(prev, current) {
+		return (prev && assess_board(prev[1], current_player) > assess_board(current[1], current_player)) ? prev : current //assess the board that we're looking ahead at
+	})
+
+	return best_move[0]; //but only return the value of the current board
+}
+
+function make_move(TRUE_GAME_BOARD, bowl)
+{
+	var new_board = generate_new_board(TRUE_GAME_BOARD);
+	bowl_index = TRUE_GAME_BOARD.indexOf(bowl);
+	var bowl_move = new_board[bowl_index];
+	
+	var stones_to_move = bowl_move.count;
+	bowl_move.count = 0;
+	
+	var next = bowl_move.next_node;
+	while(stones_to_move > 0)
+	{
+		next.count++;
+		stones_to_move--;
+		next = next.next_node;
+	}
+	
+	return new_board;
+}
+
+function legal_move(bowl, current_player)
+{
+	return (bowl.count > 0 && bowl.bowl_type == `player_move${current_player.number}`)
+}
+
+function assess_board(TRUE_GAME_BOARD, current_player)
+{
+	//boring, easy way:
+	//return TRUE_GAME_BOARD[`player_bowl${current_player}`] - TRUE_GAME_BOARD[`player_bowl${current_player}`];
+
+	//fun, more dynamic way (supports 3+ players)
+	var my_bowl = TRUE_GAME_BOARD.find((b) => b.bowl_type == `player_capture${current_player.number}`);
+	
+	var other_bowls = TRUE_GAME_BOARD.filter((b) => b.bowl_type.startsWith("player_capture"));
+	other_bowls.splice(other_bowls.indexOf(my_bowl), 1);
+	
+	var score = my_bowl.count;
+	other_bowls.forEach((b) => score -= b.count);
+	
+	return score;
+	
+}
+
+function game_over(TRUE_GAME_BOARD)
+{
+	var game_over = true;
+	TRUE_GAME_BOARD.forEach(function(node){
+		if(!node.bowl_type.startsWith("player_capture") && node.count > 0)
+		{
+			game_over = false;
+		}
+	})
+	
+	return game_over;
+}
+
+function display_game()
+{
+
+}
+
+</script>
+</style>
+<body>
+
+	<div id="output_pane">output</div>
+</body>
+</html>
