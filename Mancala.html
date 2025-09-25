@@ -174,15 +174,67 @@ function game_over(TRUE_GAME_BOARD)
 	return game_over;
 }
 
-function display_game()
+function display_game(moves)
 {
-
+	var output = $("#output_pane")[0];
+	output.textContent = "";
+	
+	moves.forEach(function(move){
+		var game = document.createElement('div');
+		game.classList.add('game');
+		move.forEach(function(bowl){
+			var bowl_div = document.createElement('div');
+			bowl_div.classList.add('bowl');
+			
+			var bowl_name = document.createElement('div');
+			bowl_name.textContent = bowl.node_name;
+			
+			var bowl_value = document.createElement('div');
+			bowl_value.textContent = bowl.count;
+			
+			if(bowl.bowl_type.startsWith("player_capture"))
+			{
+				bowl_div.classList.add('score_bowl');
+				
+				var bowl_owner = document.createElement('div');
+				//bowl_owner.textContent = `Player Score Bowl: ${bowl.bowl_type}`;
+				bowl_owner.textContent = bowl.bowl_type;
+				bowl_div.appendChild(bowl_owner);
+			}
+			
+			bowl_div.appendChild(bowl_name);
+			bowl_div.appendChild(bowl_value);
+			
+			game.appendChild(bowl_div);
+		})
+		
+		output.appendChild(game);
+	
+	})
 }
 
 </script>
+<style>
+.bowl {
+	width: 100px;
+	border: solid;
+	border-width: 2px;
+	padding: 5px;
+}
+.game {
+	height: 75px;
+	display: flex;
+	border: solid;
+	border-width: 3px;
+	padding: 5px;
+}
+.score_bowl{
+	border-color: red;
+	border-width: 3px;
+}
 </style>
 <body>
 
-	<div id="output_pane">output</div>
+	<div id="output_pane">Running Game...</div>
 </body>
 </html>
