@@ -69,16 +69,19 @@ function run_game(game)
 		plays_made.push(new_board);
 		
 		game.board = new_board; //TODO: if things start going wrong, check here, make sure we don't need to copy it
-	
+		
+		display_move(game.board);
+		
 		current_player = current_player.next_player;
 		turn++;
 	}
 	
 	var winner = assess_board(game.board, current_player);
 	
-	display_game(plays_made);
+	//display_game(plays_made);
 }
 
+//returns the new board
 function take_turn(current_player, TRUE_GAME_BOARD, depth = 5)
 {
 	if(depth == 0)
@@ -87,13 +90,17 @@ function take_turn(current_player, TRUE_GAME_BOARD, depth = 5)
 	
 	var potential_moves = [];
 
-	//TODO
-	TRUE_GAME_BOARD.forEach(function(bowl)
+	TRUE_GAME_BOARD.forEach(function(bowl, i)
 	{
 		if(legal_move(bowl, current_player))
 		{
 			var potential_move_board = make_move(TRUE_GAME_BOARD, bowl);
+			
+			potential_move_board.forEach((b) => {b.moved_from = false;});
+			
 			var look_ahead_board = take_turn(current_player.next_player, potential_move_board, depth-1);
+			
+			potential_move_board[i].moved_from = true; //specify that this is the bowl we chose
 			
 			potential_moves.push([potential_move_board, look_ahead_board]);
 		}
@@ -180,38 +187,50 @@ function display_game(moves)
 	output.textContent = "";
 	
 	moves.forEach(function(move){
-		var game = document.createElement('div');
-		game.classList.add('game');
-		move.forEach(function(bowl){
-			var bowl_div = document.createElement('div');
-			bowl_div.classList.add('bowl');
-			
-			var bowl_name = document.createElement('div');
-			bowl_name.textContent = bowl.node_name;
-			
-			var bowl_value = document.createElement('div');
-			bowl_value.textContent = bowl.count;
-			
-			if(bowl.bowl_type.startsWith("player_capture"))
-			{
-				bowl_div.classList.add('score_bowl');
-				
-				var bowl_owner = document.createElement('div');
-				//bowl_owner.textContent = `Player Score Bowl: ${bowl.bowl_type}`;
-				bowl_owner.textContent = bowl.bowl_type;
-				bowl_div.appendChild(bowl_owner);
-			}
-			
-			bowl_div.appendChild(bowl_name);
-			bowl_div.appendChild(bowl_value);
-			
-			game.appendChild(bowl_div);
-		})
-		
-		output.appendChild(game);
-	
+		display_game(output, move);
 	})
 }
+
+function display_move(move)
+{
+	var output = $("#output_pane")[0];
+
+	var move_div = document.createElement('div');
+	move_div.classList.add('move');
+	move.forEach(function(bowl){
+		var bowl_div = document.createElement('div');
+		bowl_div.classList.add('bowl');
+		
+		var bowl_name = document.createElement('div');
+		bowl_name.textContent = bowl.node_name;
+		
+		var bowl_value = document.createElement('div');
+		bowl_value.textContent = bowl.count;
+		
+		if(bowl.bowl_type.startsWith("player_capture"))
+		{
+			bowl_div.classList.add('score_bowl');
+			
+			var bowl_owner = document.createElement('div');
+			//bowl_owner.textContent = `Player Score Bowl: ${bowl.bowl_type}`;
+			bowl_owner.textContent = bowl.bowl_type;
+			bowl_div.appendChild(bowl_owner);
+		}
+		else if(bowl.moved_from)
+		{
+			bowl_div.classList.add("chosen_bowl");
+		}
+		
+		
+		bowl_div.appendChild(bowl_name);
+		bowl_div.appendChild(bowl_value);
+		
+		move_div.appendChild(bowl_div);
+	})
+	
+	output.appendChild(move_div);
+}
+
 
 </script>
 <style>
@@ -221,20 +240,25 @@ function display_game(moves)
 	border-width: 2px;
 	padding: 5px;
 }
-.game {
+.move {
 	height: 75px;
 	display: flex;
 	border: solid;
 	border-width: 3px;
 	padding: 5px;
+	flex-flow: space-between;
 }
 .score_bowl{
 	border-color: red;
 	border-width: 3px;
 }
+.chosen_bowl{
+	border-color: blue;
+	border-width: 3px;
+}
 </style>
 <body>
 
-	<div id="output_pane">Running Game...</div>
+	<div id="output_pane"></div>
 </body>
 </html>
